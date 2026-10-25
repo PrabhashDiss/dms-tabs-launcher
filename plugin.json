@@ -2,7 +2,7 @@
     "id": "tabsLauncher",
     "name": "Browser Tabs Launcher",
     "description": "List and activate open browser tabs via tabctl",
-    "version": "0.2.3",
+    "version": "0.3.0",
     "category": "utilities",
     "license": "MIT",
     "author": "kmf",
@@ -13,6 +13,6 @@
     "requires_dms": ">=1.4.0",
     "dependencies": ["tabctl"],
     "permissions": ["settings_read", "settings_write"],
-    "screenshot": "https://github.com/kmf/dms-tabs-launcher/blob/main/screenshot.png?raw=true",
+    "screenshot": "https://github.com/PrabhashDiss/dms-tabs-launcher/blob/main/screenshot.png?raw=true",
     "trigger": "\\tab"
 }

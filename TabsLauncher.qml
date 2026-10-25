@@ -1,7 +1,7 @@
 import QtQuick
+import QtQml.Models
 import Quickshell
 import Quickshell.Io
-import qs.Services
 
 QtObject {
     id: root
@@ -16,7 +16,7 @@ QtObject {
 
     signal itemsChanged
 
-    // [{ id, title, url, profile }]
+    // [{ id, title, url, profile, favIconUrl }]
     property var tabs: []
     property bool _loading: false
     property real _lastRefreshMs: 0
@@ -76,9 +76,9 @@ QtObject {
         }
     }
 
-    // tabctl list output is TSV: <tab_id>\t<title>\t<url>
+    // JSON includes the browser-provided favicon URL.
     property var listProcess: Process {
-        command: [root.effectiveTabctlPath(), "list"]
+        command: [root.effectiveTabctlPath(), "list", "--format", "json"]
         running: false
 
         stdout: StdioCollector {
@@ -106,7 +106,7 @@ QtObject {
         }
         root._loading = true;
         root._lastRefreshMs = Date.now();
-        root.listProcess.command = [root.effectiveTabctlPath(), "list"];
+        root.listProcess.command = [root.effectiveTabctlPath(), "list", "--format", "json"];
         root.listProcess.running = true;
     }
 
@@ -186,28 +186,49 @@ QtObject {
         return "tab";
     }
 
+    // Resolve images before publishing them. DMS has no browser-icon fallback
+    // for failed URL icons, so keep the browser icon until decoding succeeds.
+    property var faviconImages: Instantiator {
+        model: root.tabs
+        delegate: Image {
+            required property var modelData
+            source: /^(https?:\/\/|data:image\/)/i.test(modelData.favIconUrl || "") ? modelData.favIconUrl : ""
+            asynchronous: true
+            sourceSize: Qt.size(64, 64)
+            onStatusChanged: {
+                if (root.pluginService && (status === Image.Ready || status === Image.Error))
+                    root.pluginService.requestLauncherUpdate("tabsLauncher");
+            }
+        }
+    }
+
     function iconForTab(tab) {
         if (!tab || !tab.id)
             return "tab";
+        let image = root.faviconImages.objectAt(root.tabs.indexOf(tab));
+        // DMS strips image: from plugin results. Its svg: URL renderer keeps
+        // the source intact and uses IconImage for both SVG and raster images.
+        if (image && image.status === Image.Ready)
+            return "svg:" + image.source;
         return root.iconForBrowserName(tab.profile || root.profileFromTabId(tab.id));
     }
 
     function parseTabs(rawData) {
         let result = [];
-        let lines = (rawData || "").split("\n");
-        for (let i = 0; i < lines.length; i++) {
-            let line = lines[i];
-            if (!line)
-                continue;
-            let parts = line.split("\t");
-            if (parts.length < 3)
-                continue;
-            result.push({
-                id: parts[0],
-                title: parts[1],
-                url: parts[2],
-                profile: root.profileFromTabId(parts[0])
-            });
+        try {
+            let data = JSON.parse(rawData);
+            for (let tab of data) {
+                result.push({
+                    id: tab.id,
+                    title: tab.title,
+                    url: tab.url,
+                    profile: root.profileFromTabId(tab.id),
+                    favIconUrl: tab.favIconUrl || ""
+                });
+            }
+        } catch (error) {
+            console.warn("[TabsLauncher] Cannot parse tabctl JSON:", error.message);
+            return;
         }
         root.tabs = result;
         if (root.currentCategory.length > 0) {

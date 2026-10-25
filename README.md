@@ -10,7 +10,8 @@ A [DankMaterialShell](https://github.com/AvengeMedia/DankMaterialShell) launcher
 - Groups tabs by browser profile (`firefox`, `firefox2`, …) until you type a query
 - Filters by title, URL, or profile as you type; multiple profiles also appear as launcher categories
 - Activates the selected tab (focuses both tab and browser window)
-- Per-browser icons (Brave, Brave Origin, Chrome, Chromium, Firefox, LibreWolf, Zen, Helium, Vivaldi, Opera) derived from the tabctl tab ID prefix
+- Website favicons from tabctl's JSON output, loaded asynchronously. Missing, unsupported, or failed images keep the browser icon (Brave, Brave Origin, Chrome, Chromium, Firefox, LibreWolf, Zen, Helium, Vivaldi, Opera).
+- Favicons use the browser-provided HTTP(S) URL or embedded image data directly, without a third-party favicon service. Internal browser URLs and other unsupported schemes keep the browser icon.
 - Context menu: copy URL, close tab, refresh tab list
 - Always-active mode (skip trigger keyword)
 - Cached tab list, refreshed in the background when you query the launcher and the cache is older than 5s; nothing runs while the launcher is idle
@@ -48,6 +49,7 @@ If `tabctl status` reports no browsers, the extension is missing/disabled or the
 
 ## Installing the plugin
 
+This fork is maintained at <https://github.com/PrabhashDiss/dms-tabs-launcher>.
 Copy the plugin to your DMS plugins directory:
 
 ```bash
@@ -57,6 +59,8 @@ cp TabsLauncher.qml TabsLauncherSettings.qml plugin.json \
 ```
 
 Restart DMS (`dms restart`) to discover the new plugin.
+
+The [dotfiles mise configuration](https://github.com/PrabhashDiss/dotfiles/blob/main/.config/mise/config.toml) pins this fork to an exact commit. Its postinstall hook links `~/.config/DankMaterialShell/plugins/tabsLauncher` to mise's installed source and records the fork revision in `plugins.lock.json`. It preserves `plugin_settings.json` and moves an existing plugin checkout to `~/.config/DankMaterialShell/tabsLauncher.before-mise`. Run `mise install` after changing the pin, then restart DMS (`dms restart`) to clear cached plugin components. Manage this installation through mise, not the DMS plugin updater.
 
 ## Usage
 
@@ -77,7 +81,7 @@ Configure via DMS plugin settings:
 
 - DankMaterialShell >= 1.4.0
 - Quickshell
-- [tabctl](https://github.com/slastra/tabctl) — see [Installing tabctl](#installing-tabctl) above. The plugin auto-discovers `tabctl` via the user's login shell (`$SHELL -lc`) so installs to `~/.local/bin` work without further configuration.
+- [tabctl](https://github.com/slastra/tabctl) 2.3.1 or newer, with `list --format json` and `favIconUrl` support. See [Installing tabctl](#installing-tabctl) above. The plugin auto-discovers `tabctl` via the user's login shell (`$SHELL -lc`) so installs to `~/.local/bin` work without further configuration.
 
 ## License
 
